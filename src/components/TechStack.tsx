@@ -126,29 +126,41 @@ function Pointer({ vec = new THREE.Vector3(), isActive }: PointerProps) {
 
 const TechStack = () => {
   const [isActive, setIsActive] = useState(false);
+  const sectionRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    const handleScroll = () => {
-      const scrollY = window.scrollY || document.documentElement.scrollTop;
-      const threshold = document
-        .getElementById("work")!
-        .getBoundingClientRect().top;
-      setIsActive(scrollY > threshold);
+    const section = sectionRef.current;
+    if (!section) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsActive(entry.isIntersecting && entry.intersectionRatio > 0.2);
+      },
+      {
+        threshold: [0.2, 0.35, 0.5],
+      }
+    );
+
+    observer.observe(section);
+
+    const syncOnNavClick = () => {
+      window.setTimeout(() => {
+        const rect = section.getBoundingClientRect();
+        const viewportHeight = window.innerHeight;
+        setIsActive(rect.top < viewportHeight * 0.8 && rect.bottom > viewportHeight * 0.2);
+      }, 250);
     };
-    document.querySelectorAll(".header a").forEach((elem) => {
-      const element = elem as HTMLAnchorElement;
-      element.addEventListener("click", () => {
-        const interval = setInterval(() => {
-          handleScroll();
-        }, 10);
-        setTimeout(() => {
-          clearInterval(interval);
-        }, 1000);
-      });
+
+    const links = document.querySelectorAll(".header a");
+    links.forEach((elem) => {
+      elem.addEventListener("click", syncOnNavClick);
     });
-    window.addEventListener("scroll", handleScroll);
+
     return () => {
-      window.removeEventListener("scroll", handleScroll);
+      observer.disconnect();
+      links.forEach((elem) => {
+        elem.removeEventListener("click", syncOnNavClick);
+      });
     };
   }, []);
   const materials = useMemo(() => {
@@ -167,7 +179,7 @@ const TechStack = () => {
   }, []);
 
   return (
-    <div className="techstack">
+    <div className="techstack" ref={sectionRef}>
       <h2> My Techstack</h2>
 
       <Canvas
